@@ -1,6 +1,6 @@
+
 // Store our API endpoint inside queryUrl
-var queryUrl = "https://https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson&starttime=2020-12-01&endtime=" +
-  "2021-01-10&maxlongitude=-69.52148437&minlongitude=-123.83789062&maxlatitude=48.74894534&minlatitude=25.16517337";
+var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson";
 
 // Perform a GET request to the query URL
 d3.json(queryUrl, function(data) {
@@ -11,16 +11,39 @@ function createFeatures(earthquakeData) {
 
   // Give each feature a popup describing the place and time of the earthquake
   function onEachFeature(feature, layer) {
-    layer.bindPopup("<h3>" + feature.properties.place +
-      "</h3><hr><p>" + new Date(feature.properties.time) + "</p>");
+    layer.bindPopup("Magnitude:" + feature.properties.mag +
+      "<br>Location:" + feature.properties.place);
   }
 
+  // Create marker color options
+  function markerColor(mag) {
+
+      return mag < 1 ? '#FACC2E' : 
+             mag < 2 ? '#F7FE2E' :
+             mag < 3 ? '#64FE2E' :
+             mag < 4 ? '#2EFE9A' :
+             mag < 5 ? '#FFBF00' :
+             mag < 6 ? '#FF5733' :
+                       '#C70039';
+  }
+ 
   // Create a GeoJSON layer containing the features array on the earthquakeData object
   var earthquakes = L.geoJSON(earthquakeData, {
-    onEachFeature: onEachFeature
-  });
+    onEachFeature: onEachFeature,
+    pointToLayer: function (feature, latlng) {
+      var MarkerOptions = {
+      radius: 3*feature.properties.mag,
+      fillColor: markerColor(feature.properties.mag),
+      color: "black",
+      weight: 1,
+      opacity: 1,
+      fillOpacity: 0.8
+      };
+      return L.circleMarker(latlng, MarkerOptions);
+   }
+  }); 
 
-  // Sending our earthquakes layer to the createMap function
+//   // Sending our earthquakes layer to the createMap function
   createMap(earthquakes);
 }
 
@@ -49,7 +72,7 @@ function createMap(earthquakes) {
     "Dark Map": darkmap
   };
 
-  // Create overlay object to hold our overlay layer
+ // Create overlay object to hold our overlay layer
   var overlayMaps = {
     Earthquakes: earthquakes
   };
@@ -63,10 +86,27 @@ function createMap(earthquakes) {
     layers: [streetmap, earthquakes]
   });
 
-  // Create a layer control
-  // Pass in our baseMaps and overlayMaps
-  // Add the layer control to the map
-  L.control.layers(baseMaps, overlayMaps, {
-    collapsed: false
-  }).addTo(myMap);
-}
+// Create a layer control
+L.control.layers(baseMaps, overlayMaps, {
+  collapsed: false
+ }).addTo(myMap);
+
+// Create legend
+var legend = L.control({position: 'bottomright'});
+  legend.onAdd = function () {
+    var div = L.DomUtil.create('div', 'info legend'),
+        magnitudes = [0, 1, 2, 3, 4, 5, 6];
+        labels = [];
+  
+    for (var i = 0; i < magnitudes.length; i++) {
+    div.innerHTML +=
+        '<i style="background:' + getColor(magnitudes[i] + 1) + '">&nbsp&nbsp&nbsp&nbsp</i>' +
+        magnitudes[i] + (magnitudes[i + 1] ? '&ndash;' + magnitudes[i + 1] + '<br>' : '+');
+    }  
+
+  return div;
+  };
+
+legend.addTo(myMap);
+
+};
